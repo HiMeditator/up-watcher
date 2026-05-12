@@ -1,5 +1,6 @@
 import requests
 import datetime
+from .. import console
 from ..config import get_config_value
 
 
@@ -48,7 +49,7 @@ def get_video_replies(aid: int, cookie: str | None = None, kwargs: dict | None =
     }
     if cookie is None: cookie = get_config_value("cookie")
     if cookie: header_args["Cookie"] = cookie
-    else: print("Cookie not found, this may cause problems...")
+    else: console.warning("未找到 Cookie，获取评论可能失败或结果不完整")
     session.headers.update(header_args)
     url = "https://api.bilibili.com/x/v2/reply"
     

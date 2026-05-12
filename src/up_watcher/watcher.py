@@ -2,9 +2,11 @@ import time
 import random
 from datetime import datetime
 from typing import Callable
+from . import console
 from .config import get_config_value, set_config
 from .video import get_video_info, get_comments
 from .im import connect_feishu, feishu_handle_new_comments
+
 
 def _get_wait_value():
     """
@@ -27,6 +29,28 @@ def _get_wait_value():
 comment_pool = {}
 
 
+def _show_wait_countdown(wait_time: int, total_wait_time: int) -> None:
+    width = len(str(total_wait_time))
+    print(f"\r下次检查倒计时：{wait_time:>{width}} 秒后检查评论\033[K", end="", flush=True)
+
+
+def _clear_wait_countdown() -> None:
+    print("\r\033[K", end="", flush=True)
+
+
+def _wait_for_next_check(wait_time: int) -> bool:
+    total_wait_time = wait_time
+    while wait_time > 0:
+        _show_wait_countdown(wait_time, total_wait_time)
+        time.sleep(1)
+        wait_time -= 1
+        if get_config_value("stop"):
+            _clear_wait_countdown()
+            return False
+    _clear_wait_countdown()
+    return True
+
+
 def handle_comments(mid: str, comments, watch_all: bool, new_comments_callback: Callable | None = None):
     new_comments = []
     for comment in comments:
@@ -38,64 +62,58 @@ def handle_comments(mid: str, comments, watch_all: bool, new_comments_callback: 
     if len(new_comments) > 0:
         if new_comments_callback:
             new_comments_callback(new_comments)
-        print(f"New comments: {len(new_comments)}")
-        for comment in new_comments:
-            print(f"{comment['uname']}: {comment['message']}")
+        console.show_comments(new_comments)
 
 
 def video_comments_watcher(bvid: str, interval: int, watch_all: bool = False) -> None:
-    print(f"Fetching video info...")
+    console.info("正在获取视频信息...")
     video_info = get_video_info(bvid)
     aid = video_info["aid"]
     up_mid = video_info["up_mid"]
-    print(f"Title: {video_info['title']}")
-    print(f"UP Name: {video_info['up_name']}")
-    print(f"UP MID: {video_info['up_mid']}")
-    print(f"AID: {video_info['aid']}")
+    console.show_video_info(video_info)
+    console.show_watch_settings(interval, watch_all)
 
-    print("Fetching comments...")
+    console.info("正在获取评论...")
     handle_comments(up_mid, get_comments(aid), watch_all)
 
     set_config("stop", False)
+    console.success("监控已启动，按 Ctrl+C 退出；也可以在另一个终端运行 upw stop 停止")
     while True:
         wait_time = interval if interval > 5 else _get_wait_value()
-        while wait_time > 0:
-            time.sleep(1)
-            wait_time -= 1
-            if get_config_value("stop"):
-                return
+        if not _wait_for_next_check(wait_time):
+            console.success("已收到停止指令，监控结束")
+            return
         handle_comments(up_mid, get_comments(aid), watch_all)
 
 
 def video_comments_watcher_feishu(bvid: str, interval: int, watch_all: bool = False) -> None:
-    print(f"Fetching video info...")
+    console.info("正在获取视频信息...")
     video_info = get_video_info(bvid)
     aid = video_info["aid"]
     up_mid = video_info["up_mid"]
-    print(f"Title: {video_info['title']}")
-    print(f"UP Name: {video_info['up_name']}")
-    print(f"UP MID: {video_info['up_mid']}")
-    print(f"AID: {video_info['aid']}")
+    console.show_video_info(video_info)
+    console.show_watch_settings(interval, watch_all, feishu_enabled=True)
 
+    watch_info = "\n".join(
+        [
+            f"- 视频名称：{video_info['title']}",
+            f"- UP 主：{video_info['up_name']}",
+            f"- 监控间隔：{f'{interval} 秒' if interval > 5 else '智能间隔'}",
+        ]
+    )
 
-    watch_info = f"""
-    - 视频名称：{video_info['title']}
-    - UP名称：{video_info['up_name']}
-    - 监控间隔：{interval if interval > 5 else '智能间隔'}
-    """
+    console.info("正在连接飞书...")
+    if not connect_feishu(watch_info):
+        return
 
-    print("连接飞书...")
-    connect_feishu(watch_info)
-
-    print("Fetching comments...")
+    console.info("正在获取评论...")
     handle_comments(up_mid, get_comments(aid), watch_all)
 
     set_config("stop", False)
+    console.success("监控已启动，按 Ctrl+C 退出；也可以在另一个终端运行 upw stop 停止")
     while True:
         wait_time = interval if interval > 5 else _get_wait_value()
-        while wait_time > 0:
-            time.sleep(1)
-            wait_time -= 1
-            if get_config_value("stop"):
-                return
+        if not _wait_for_next_check(wait_time):
+            console.success("已收到停止指令，监控结束")
+            return
         handle_comments(up_mid, get_comments(aid), watch_all, feishu_handle_new_comments)
