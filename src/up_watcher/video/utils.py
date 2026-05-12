@@ -33,7 +33,7 @@ def get_video_info(bvid: str):
         "aid": data["aid"],
         "title": data["title"],
         "up_name": data["owner"]["name"],
-        "up_mid": data["owner"]["mid"],
+        "up_mid": str(data["owner"]["mid"]),
     }
 
 

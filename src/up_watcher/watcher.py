@@ -5,7 +5,11 @@ from typing import Callable
 from . import console
 from .config import get_config_value, set_config
 from .video import get_video_info, get_comments
-from .im import connect_feishu, feishu_handle_new_comments
+from .im import (
+    connect_feishu,
+    is_feishu_connect_to_user,
+    feishu_handle_new_comments
+)
 
 
 def _get_wait_value():
@@ -52,6 +56,7 @@ def _wait_for_next_check(wait_time: int) -> bool:
 
 
 def handle_comments(mid: str, comments, watch_all: bool, new_comments_callback: Callable | None = None):
+    global comment_pool
     new_comments = []
     for comment in comments:
         if comment["mid"] == mid or watch_all:
@@ -63,7 +68,8 @@ def handle_comments(mid: str, comments, watch_all: bool, new_comments_callback: 
         if new_comments_callback:
             new_comments_callback(new_comments)
         console.show_comments(new_comments)
-
+    else:
+        console.info("未发现新评论")
 
 def video_comments_watcher(bvid: str, interval: int, watch_all: bool = False) -> None:
     console.info("正在获取视频信息...")
@@ -79,6 +85,7 @@ def video_comments_watcher(bvid: str, interval: int, watch_all: bool = False) ->
     set_config("stop", False)
     console.success("监控已启动，按 Ctrl+C 退出；也可以在另一个终端运行 upw stop 停止")
     while True:
+        console.info("正在获取评论...")
         wait_time = interval if interval > 5 else _get_wait_value()
         if not _wait_for_next_check(wait_time):
             console.success("已收到停止指令，监控结束")
@@ -102,12 +109,16 @@ def video_comments_watcher_feishu(bvid: str, interval: int, watch_all: bool = Fa
         ]
     )
 
-    console.info("正在连接飞书...")
+    console.info("正在连接飞书机器人...")
     if not connect_feishu(watch_info):
         return
 
+    console.info("正在等待用户向飞书机器人发送信息...")
+    while not is_feishu_connect_to_user():
+        time.sleep(1)
+
     console.info("正在获取评论...")
-    handle_comments(up_mid, get_comments(aid), watch_all)
+    handle_comments(up_mid, get_comments(aid), watch_all, feishu_handle_new_comments)
 
     set_config("stop", False)
     console.success("监控已启动，按 Ctrl+C 退出；也可以在另一个终端运行 upw stop 停止")

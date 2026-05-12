@@ -12,7 +12,7 @@ from lark_oapi.api.im.v1 import * # type: ignore
 
 
 watch_info_str = ""
-user_open_id = ""
+user_open_id = None
 client = None
 ws_client = None
 ws_thread = None
@@ -92,13 +92,6 @@ def _send_message_to_feishu_user(text: str) -> CreateMessageResponse | None:
     return response
 
 
-def feishu_handle_new_comments(comments: list[dict]):
-    comment_info = []
-    for comment in comments:
-        comment_info.append(f"{comment['uname']}（{comment['ctime']}）：{comment['message']}")
-    _send_message_to_feishu_user("\n".join(comment_info))
-
-
 def _run_ws_client(
     app_id: str,
     app_secret: str,
@@ -152,6 +145,18 @@ def _wait_for_ws_start(startup_errors: Queue, timeout: float = 5.0) -> bool:
 
     console.warning("飞书长连接仍在后台建立中，评论监控将继续启动")
     return True
+
+
+def is_feishu_connect_to_user() -> bool:
+    global user_open_id
+    return user_open_id is not None
+
+
+def feishu_handle_new_comments(comments: list[dict]):
+    comment_info = []
+    for comment in comments:
+        comment_info.append(f"{comment['uname']}（{comment['ctime']}）：{comment['message']}")
+    _send_message_to_feishu_user("\n".join(comment_info))
 
 
 def connect_feishu(watch_info: str) -> bool:
