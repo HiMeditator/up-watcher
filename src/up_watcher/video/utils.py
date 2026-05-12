@@ -1,15 +1,27 @@
 import requests
 import datetime
+from ..config import get_config_value
+
 
 def get_video_info(bvid: str):
     """
-    基于 Bilibili 视频的 BV 号获取视频关键信息
+    基于 Bilibili 视频的 BV 号获取视频关键信息，格式如下：
+
+    ```
+    {
+        "aid": "视频 AID",
+        "title": "视频标题",
+        "up_name": "UP 名字",
+        "up_mid": "UP ID"
+    }
+    ```
     """
     session = requests.Session()
-    session.headers.update({
+    header_args = {
         "User-Agent": "Mozilla/5.0",
         "Referer": "https://www.bilibili.com",
-    })
+    }
+    session.headers.update(header_args)
 
     url = "https://api.bilibili.com/x/web-interface/view"
     r = session.get(url, params={"bvid": bvid})
@@ -34,7 +46,9 @@ def get_video_replies(aid: int, cookie: str | None = None, kwargs: dict | None =
         "User-Agent": "Mozilla/5.0",
         "Referer": "https://www.bilibili.com",
     }
+    if cookie is None: cookie = get_config_value("cookie")
     if cookie: header_args["Cookie"] = cookie
+    else: print("Cookie not found, this may cause problems...")
     session.headers.update(header_args)
     url = "https://api.bilibili.com/x/v2/reply"
     
@@ -65,8 +79,10 @@ def replies_extractor(data):
     page = data["page"]
     replies = data["replies"]
     comments = []
+    if not replies: return {"page": page, "comments": []}
     for reply in replies:
         comment = {
+            "rpid": reply["rpid"],
             "uname": reply["member"]["uname"],
             "ctime": _timestamp_to_local_datetime(reply["ctime"]),
             "mid": reply["member"]["mid"],
@@ -87,3 +103,24 @@ def _timestamp_to_local_datetime(timestamp, format_str="%Y-%m-%d %H:%M:%S"):
     utc_dt = datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
     local_dt = utc_dt.astimezone()
     return local_dt.strftime(format_str)
+
+
+def get_comments(aid: int, cookie: str | None = None, kwargs: dict | None = None):
+    """
+    获取视频的评论信息，格式如下：
+
+    ```
+    [
+        {
+            "rpid": "评论 ID",
+            "uname": "用户名",
+            "ctime": "评论时间",
+            "mid": "用户ID",
+            "message": "评论内容"
+        },
+        ...
+    ]
+    ```
+    """
+    data = get_video_replies(aid, cookie, kwargs)
+    return replies_extractor(data).get("comments", [])

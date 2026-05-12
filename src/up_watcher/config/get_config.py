@@ -9,5 +9,5 @@ def get_config() -> dict:
         return json.load(f)
 
 
-def get_cookie() -> str | None:
-    return get_config().get("cookie")
+def get_config_value(key: str):
+    return get_config().get(key)
