@@ -1,8 +1,10 @@
 import time
 import random
 from datetime import datetime
+from typing import Callable
 from .config import get_config_value, set_config
 from .video import get_video_info, get_comments
+from .im import connect_feishu, feishu_handle_new_comments
 
 def _get_wait_value():
     """
@@ -25,7 +27,7 @@ def _get_wait_value():
 comment_pool = {}
 
 
-def handle_comments(mid: str, comments, watch_all: bool):
+def handle_comments(mid: str, comments, watch_all: bool, new_comments_callback: Callable | None = None):
     new_comments = []
     for comment in comments:
         if comment["mid"] == mid or watch_all:
@@ -33,9 +35,12 @@ def handle_comments(mid: str, comments, watch_all: bool):
                 comment_pool[comment["rpid"]] = comment
                 new_comments.append(comment)
 
-    print(f"New comments: {len(new_comments)}")
-    for comment in new_comments:
-        print(f"{comment['uname']}: {comment['message']}")
+    if len(new_comments) > 0:
+        if new_comments_callback:
+            new_comments_callback(new_comments)
+        print(f"New comments: {len(new_comments)}")
+        for comment in new_comments:
+            print(f"{comment['uname']}: {comment['message']}")
 
 
 def video_comments_watcher(bvid: str, interval: int, watch_all: bool = False) -> None:
@@ -48,7 +53,7 @@ def video_comments_watcher(bvid: str, interval: int, watch_all: bool = False) ->
     print(f"UP MID: {video_info['up_mid']}")
     print(f"AID: {video_info['aid']}")
 
-    print("\nFetching comments...")
+    print("Fetching comments...")
     handle_comments(up_mid, get_comments(aid), watch_all)
 
     set_config("stop", False)
@@ -60,3 +65,37 @@ def video_comments_watcher(bvid: str, interval: int, watch_all: bool = False) ->
             if get_config_value("stop"):
                 return
         handle_comments(up_mid, get_comments(aid), watch_all)
+
+
+def video_comments_watcher_feishu(bvid: str, interval: int, watch_all: bool = False) -> None:
+    print(f"Fetching video info...")
+    video_info = get_video_info(bvid)
+    aid = video_info["aid"]
+    up_mid = video_info["up_mid"]
+    print(f"Title: {video_info['title']}")
+    print(f"UP Name: {video_info['up_name']}")
+    print(f"UP MID: {video_info['up_mid']}")
+    print(f"AID: {video_info['aid']}")
+
+
+    watch_info = f"""
+    - 视频名称：{video_info['title']}
+    - UP名称：{video_info['up_name']}
+    - 监控间隔：{interval if interval > 5 else '智能间隔'}
+    """
+
+    print("连接飞书...")
+    connect_feishu(watch_info)
+
+    print("Fetching comments...")
+    handle_comments(up_mid, get_comments(aid), watch_all)
+
+    set_config("stop", False)
+    while True:
+        wait_time = interval if interval > 5 else _get_wait_value()
+        while wait_time > 0:
+            time.sleep(1)
+            wait_time -= 1
+            if get_config_value("stop"):
+                return
+        handle_comments(up_mid, get_comments(aid), watch_all, feishu_handle_new_comments)

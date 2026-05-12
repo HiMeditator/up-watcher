@@ -1,7 +1,7 @@
 import argparse
 from .config import set_config
 from .video import get_video_info
-from .watcher import video_comments_watcher
+from .watcher import video_comments_watcher, video_comments_watcher_feishu
 
 
 def main():
@@ -20,6 +20,7 @@ def main():
     parser_watch.add_argument("bvid", help="Video BV id, e.g. BV1xx411c7mD")
     parser_watch.add_argument("--interval", '-i', default=30, help="Query interval, default is 30 seconds, must greater than 5")
     parser_watch.add_argument("--watch-all", '-a', action='store_true', help="Watch comments from all users, not just the UP")
+    parser_watch.add_argument("--feishu", '-f', action='store_true', help="Send new comments to Feishu")
     # stop command
     parser_stop = subparsers.add_parser("stop", help="Stop watching UP's new comments of a video")
 
@@ -32,7 +33,10 @@ def main():
         show_video_info(args.bvid)
     
     elif args.command == "watch":
-        video_comments_watcher(args.bvid, args.interval, args.watch_all)
+        if args.feishu:
+            video_comments_watcher_feishu(args.bvid, args.interval, args.watch_all)
+        else:
+            video_comments_watcher(args.bvid, args.interval, args.watch_all)
 
     elif args.command == "stop":
         stop_watching()
