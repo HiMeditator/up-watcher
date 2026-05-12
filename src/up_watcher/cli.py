@@ -18,6 +18,8 @@ def main():
     # watch command
     parser_watch = subparsers.add_parser("watch", help="Watch UP's new comments of a video")
     parser_watch.add_argument("bvid", help="Video BV id, e.g. BV1xx411c7mD")
+    parser_watch.add_argument("--interval", '-i', default=30, help="Query interval, default is 30 seconds, must greater than 5")
+    parser_watch.add_argument("--watch-all", '-a', action='store_true', help="Watch comments from all users, not just the UP")
     # stop command
     parser_stop = subparsers.add_parser("stop", help="Stop watching UP's new comments of a video")
 
@@ -30,7 +32,7 @@ def main():
         show_video_info(args.bvid)
     
     elif args.command == "watch":
-        video_comments_watcher(args.bvid)
+        video_comments_watcher(args.bvid, args.interval, args.watch_all)
 
     elif args.command == "stop":
         stop_watching()
