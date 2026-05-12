@@ -49,7 +49,9 @@ def get_video_replies(aid: int, cookie: str | None = None, kwargs: dict | None =
     }
     if cookie is None: cookie = get_config_value("cookie")
     if cookie: header_args["Cookie"] = cookie
-    else: console.warning("未找到 Cookie，获取评论可能失败或结果不完整")
+    else:
+        console.warning("未找到 Cookie，获取评论可能失败或结果不完整，可通过如下命令设置：")
+        console.command_hint('uv set cookie "your_bilibili_cookie"')
     session.headers.update(header_args)
     url = "https://api.bilibili.com/x/v2/reply"
     

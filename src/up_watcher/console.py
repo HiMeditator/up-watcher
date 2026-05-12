@@ -100,12 +100,18 @@ def show_video_info(video_info: Mapping[str, object]) -> None:
     )
 
 
-def show_watch_settings(interval: int, watch_all: bool, feishu_enabled: bool = False) -> None:
+def show_watch_settings(
+    interval: int,
+    watch_all: bool,
+    feishu_enabled: bool = False,
+    sound_enabled: bool = False,
+) -> None:
     key_values(
         "监控设置",
         (
             ("监听范围", "全部评论" if watch_all else "仅 UP 主评论"),
             ("轮询间隔", f"{interval} 秒" if interval > 5 else "智能间隔"),
+            ("声音提醒", "已开启" if sound_enabled else "未开启"),
             ("飞书推送", "已开启" if feishu_enabled else "未开启"),
         ),
     )

@@ -8,6 +8,7 @@ dependencies = [
     "lark-oapi>=1.6.4",
     "platformdirs>=4.9.6",
     "requests>=2.34.0",
+    "simpleaudio>=1.0.4",
 ]
 
 [project.scripts]
@@ -19,3 +20,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/up_watcher"]
+artifacts = [
+  "src/up_watcher/assets/*.wav",
+]

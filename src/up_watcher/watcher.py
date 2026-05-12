@@ -1,6 +1,8 @@
 import time
 import random
+from .utils import play_audio
 from datetime import datetime
+from threading import Thread
 from typing import Callable
 from . import console
 from .config import get_config_value, set_config
@@ -55,7 +57,23 @@ def _wait_for_next_check(wait_time: int) -> bool:
     return True
 
 
-def handle_comments(mid: str, comments, watch_all: bool, new_comments_callback: Callable | None = None):
+def _play_comment_alert_sound() -> None:
+    def _play() -> None:
+        try:
+            play_audio("ring.wav")
+        except Exception as exc:
+            console.warning(f"声音提醒播放失败：{exc}")
+
+    Thread(target=_play, name="comment-alert-sound", daemon=True).start()
+
+
+def handle_comments(
+    mid: str,
+    comments,
+    watch_all: bool,
+    sound_enabled: bool,
+    new_comments_callback: Callable | None = None,
+):
     global comment_pool
     new_comments = []
     for comment in comments:
@@ -65,22 +83,24 @@ def handle_comments(mid: str, comments, watch_all: bool, new_comments_callback: 
                 new_comments.append(comment)
 
     if len(new_comments) > 0:
+        if sound_enabled:
+            _play_comment_alert_sound()
         if new_comments_callback:
             new_comments_callback(new_comments)
         console.show_comments(new_comments)
     else:
         console.info("未发现新评论")
 
-def video_comments_watcher(bvid: str, interval: int, watch_all: bool = False) -> None:
+def video_comments_watcher(bvid: str, interval: int, watch_all: bool = False, sound_enabled: bool = False) -> None:
     console.info("正在获取视频信息...")
     video_info = get_video_info(bvid)
     aid = video_info["aid"]
     up_mid = video_info["up_mid"]
     console.show_video_info(video_info)
-    console.show_watch_settings(interval, watch_all)
+    console.show_watch_settings(interval, watch_all, sound_enabled=sound_enabled)
 
     console.info("正在获取评论...")
-    handle_comments(up_mid, get_comments(aid), watch_all)
+    handle_comments(up_mid, get_comments(aid), watch_all, sound_enabled)
 
     set_config("stop", False)
     console.success("监控已启动，按 Ctrl+C 退出；也可以在另一个终端运行 upw stop 停止")
@@ -90,16 +110,21 @@ def video_comments_watcher(bvid: str, interval: int, watch_all: bool = False) ->
         if not _wait_for_next_check(wait_time):
             console.success("已收到停止指令，监控结束")
             return
-        handle_comments(up_mid, get_comments(aid), watch_all)
+        handle_comments(up_mid, get_comments(aid), watch_all, sound_enabled)
 
 
-def video_comments_watcher_feishu(bvid: str, interval: int, watch_all: bool = False) -> None:
+def video_comments_watcher_feishu(
+    bvid: str,
+    interval: int,
+    watch_all: bool = False,
+    sound_enabled: bool = False,
+) -> None:
     console.info("正在获取视频信息...")
     video_info = get_video_info(bvid)
     aid = video_info["aid"]
     up_mid = video_info["up_mid"]
     console.show_video_info(video_info)
-    console.show_watch_settings(interval, watch_all, feishu_enabled=True)
+    console.show_watch_settings(interval, watch_all, True, sound_enabled)
 
     watch_info = "\n".join(
         [
@@ -118,7 +143,7 @@ def video_comments_watcher_feishu(bvid: str, interval: int, watch_all: bool = Fa
         time.sleep(1)
 
     console.info("正在获取评论...")
-    handle_comments(up_mid, get_comments(aid), watch_all, feishu_handle_new_comments)
+    handle_comments(up_mid, get_comments(aid), watch_all, sound_enabled, feishu_handle_new_comments)
 
     set_config("stop", False)
     console.success("监控已启动，按 Ctrl+C 退出；也可以在另一个终端运行 upw stop 停止")
@@ -127,4 +152,4 @@ def video_comments_watcher_feishu(bvid: str, interval: int, watch_all: bool = Fa
         if not _wait_for_next_check(wait_time):
             console.success("已收到停止指令，监控结束")
             return
-        handle_comments(up_mid, get_comments(aid), watch_all, feishu_handle_new_comments)
+        handle_comments(up_mid, get_comments(aid), watch_all, sound_enabled, feishu_handle_new_comments)

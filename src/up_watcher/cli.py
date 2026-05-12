@@ -73,20 +73,28 @@ def main():
     parser_watch.add_argument("-h", "--help", action="help", help="显示帮助信息并退出")
     parser_watch.add_argument("bvid", metavar="BV号", help="视频 BV 号，例如 BV1xx411c7mD")
     parser_watch.add_argument(
-        "--interval",
-        "-i",
+        "--interval", "-i",
         default=30,
         type=_interval_seconds,
         metavar="秒数",
         help="轮询间隔，默认 30 秒；设置为 5 秒及以下时启用智能间隔",
     )
     parser_watch.add_argument(
-        "--watch-all",
-        "-a",
+        "--watch-all", "-a",
         action="store_true",
         help="监控所有用户评论，默认仅监控 UP 主评论",
     )
-    parser_watch.add_argument("--feishu", "-f", action="store_true", help="将新评论推送到飞书")
+    parser_watch.add_argument(
+        "--sound", "-s",
+        action="store_true",
+        help="发现新评论消息时播放声音提醒"
+    )
+    parser_watch.add_argument(
+        "--feishu", "-f",
+        action="store_true",
+        help="将新评论消息推送到飞书机器人"
+    )
+
 
     parser_stop = subparsers.add_parser("stop", help="停止正在运行的监控", add_help=False)
     parser_stop.add_argument("-h", "--help", action="help", help="显示帮助信息并退出")
@@ -102,9 +110,9 @@ def main():
 
         elif args.command == "watch":
             if args.feishu:
-                video_comments_watcher_feishu(args.bvid, args.interval, args.watch_all)
+                video_comments_watcher_feishu(args.bvid, args.interval, args.watch_all, args.sound)
             else:
-                video_comments_watcher(args.bvid, args.interval, args.watch_all)
+                video_comments_watcher(args.bvid, args.interval, args.watch_all, args.sound)
 
         elif args.command == "stop":
             stop_watching()

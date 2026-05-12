@@ -168,7 +168,7 @@ def connect_feishu(watch_info: str) -> bool:
     APP_SECRET = get_config_value("feishu_app_secret")
 
     if not APP_ID or not APP_SECRET:
-        console.error("请先配置飞书应用 ID 和应用密钥")
+        console.error("请先配置飞书应用 ID 和应用密钥，命令如下：")
         console.command_hint("upw set feishu_app_id <app_id>")
         console.command_hint("upw set feishu_app_secret <app_secret>")
         return False
