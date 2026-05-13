@@ -2,6 +2,8 @@
 
 Up Watcher 是一个用于监控 Bilibili 视频评论的命令行工具。它可以按固定间隔轮询指定视频的最新评论，默认只关注 UP 主本人的评论，也可以切换为监听全部评论；发现新评论时会在终端显示，并可选择播放提示音或推送到飞书机器人。
 
+![](./docs/img/03.png)
+
 ## 功能特性
 
 - **视频信息查询**：根据 BV 号查询标题、UP 主、UP 主编号和视频 AID；该功能不需要 Cookie。
@@ -12,7 +14,6 @@ Up Watcher 是一个用于监控 Bilibili 视频评论的命令行工具。它�
 - **声音提醒**：使用 `-s` / `--sound` 后，发现新评论时播放内置 `ring.wav`。
 - **飞书推送**：使用 `-f` / `--feishu` 后，可将新评论通过飞书机器人推送给已连接用户。
 - **配置管理**：通过 `upw set` 写入本机用户配置目录，可保存 Bilibili Cookie、飞书应用配置和停止标记。
-- **远程停止**：监控运行时，可在另一个终端执行 `upw stop` 请求停止当前轮询。
 
 ## 环境要求
 
@@ -84,12 +85,7 @@ Cookie 和飞书密钥会以明文保存在本机配置文件中，请不要提�
 
 ### 设置飞书配置
 
-飞书推送需要先配置飞书应用的 App ID 和 App Secret：
-
-```bash
-upw set feishu_app_id "<app_id>"
-upw set feishu_app_secret "<app_secret>"
-```
+配置与使用飞书机器人推送最新评论消息请参考该文档：[feishu_robot.md](./docs/feishu_robot.md)。
 
 使用飞书推送时，工具会启动飞书长连接并等待用户在飞书中给机器人发送任意消息。收到用户消息后，工具会记录该用户的 `open_id`，后续新评论会推送给该用户。
 
@@ -153,7 +149,7 @@ UP 主编号：486906719
 
 ### `upw watch`
 
-监控指定视频的评论。
+监控指定视频的评论，每次会拉取最新的 20 条评论，并检查其中是否有新评论。
 
 ```bash
 upw watch <bvid> [-i <seconds>] [-a] [-s] [-f]
@@ -224,7 +220,7 @@ upw stop
 `upw watch` 的核心流程如下：
 
 1. 通过 Bilibili `x/web-interface/view` 接口把 BV 号解析为 AID，并获取 UP 主信息。
-2. 通过 Bilibili `x/v2/reply` 接口获取评论列表。
+2. 通过 Bilibili `x/v2/reply` 接口获取最新的 20 条评论。
 3. 从评论数据中提取 `rpid`、用户名、发布时间、用户 MID 和正文。
 4. 根据 `watch_all` 决定只保留 UP 主评论或保留全部评论。
 5. 使用内存中的 `comment_pool` 按 `rpid` 去重。
@@ -237,7 +233,6 @@ upw stop
 ```text
 up-watcher/
 ├── pyproject.toml              # 项目元数据、依赖和 upw 入口
-├── uv.lock                     # uv 锁文件
 ├── README.md
 └── src/
     └── up_watcher/

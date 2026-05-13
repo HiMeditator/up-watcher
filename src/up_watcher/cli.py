@@ -101,6 +101,8 @@ def main():
 
     args = parser.parse_args()
 
+    console.info("详细教程请参考：https://github.com/HiMeditator/up-watcher")
+
     try:
         if args.command == "set":
             cli_set_config(args.key, args.value)
