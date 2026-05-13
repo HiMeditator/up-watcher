@@ -12,6 +12,12 @@ https://open.feishu.cn/document/develop-an-echo-bot/faq
 
 ## 配置密钥
 
+如果你是从 PyPI 安装 Up Watcher，请先安装飞书可选依赖：
+
+```bash
+pip install "up-watcher[feishu]"
+```
+
 在刚才创建机器人的页面，点击 `凭证与基础信息` Tab，即可看到应用的 `App ID` 与 `App Secret`
 
 ![](./img/02.png)

@@ -1,25 +1,90 @@
 [project]
 name = "up-watcher"
 version = "0.1.0"
-description = "Add your description here"
+description = "一个用于监控B站新视频评论的命令行工具，可选配声音和飞书通知功能。"
 readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-    "lark-oapi>=1.6.4",
-    "platformdirs>=4.9.6",
-    "requests>=2.34.0",
-    "simpleaudio>=1.0.4",
+license = "MIT"
+authors = [
+    { name = "Chen Janai" },
 ]
+keywords = ["bilibili", "comments", "watcher", "cli", "feishu"]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: Chinese (Simplified)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "platformdirs>=4.0.0",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+feishu = [
+    "lark-oapi>=1.6.4",
+]
+sound = [
+    "simpleaudio>=1.0.4; platform_system != 'Windows'",
+]
+all = [
+    "lark-oapi>=1.6.4",
+    "simpleaudio>=1.0.4; platform_system != 'Windows'",
+]
+
+[project.urls]
+Homepage = "https://github.com/HiMeditator/up-watcher"
+Repository = "https://github.com/HiMeditator/up-watcher"
+Issues = "https://github.com/HiMeditator/up-watcher/issues"
+Documentation = "https://github.com/HiMeditator/up-watcher#readme"
 
 [project.scripts]
 upw = "up_watcher.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build]
+exclude = [
+    "/.git",
+    "/.uv-cache",
+    "/.venv",
+    "/build",
+    "/dist",
+    "/wheels",
+    "/temp.*",
+    "/**/__pycache__",
+    "/**/*.py[co]",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/docs",
+    "/README.md",
+    "/LICENSE",
+    "/pyproject.toml",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/up_watcher"]
 artifacts = [
-  "src/up_watcher/assets/*.wav",
+    "src/up_watcher/assets/*.wav",
 ]

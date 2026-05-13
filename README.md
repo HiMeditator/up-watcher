@@ -2,7 +2,7 @@
 
 Up Watcher 是一个用于监控 Bilibili 视频评论的命令行工具。它可以按固定间隔轮询指定视频的最新评论，默认只关注 UP 主本人的评论，也可以切换为监听全部评论；发现新评论时会在终端显示，并可选择播放提示音或推送到飞书机器人。
 
-![](./docs/img/03.png)
+![Up Watcher 飞书推送示例](https://raw.githubusercontent.com/HiMeditator/up-watcher/main/docs/img/03.png)
 
 ## 功能特性
 
@@ -17,22 +17,62 @@ Up Watcher 是一个用于监控 Bilibili 视频评论的命令行工具。它�
 
 ## 环境要求
 
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/)
+- Python 3.10+
+- 开发环境推荐使用 [uv](https://docs.astral.sh/uv/)
 
 项目依赖在 [pyproject.toml](./pyproject.toml) 中声明：
 
 - `requests`：访问 Bilibili API
 - `platformdirs`：解析跨平台用户配置目录
-- `lark-oapi`：连接飞书开放平台并收发消息
-- `simpleaudio`：非 Windows 平台播放提示音；Windows 平台使用标准库 `winsound`
+- `lark-oapi`：可选依赖，用于连接飞书开放平台并收发消息
+- `simpleaudio`：可选依赖，非 Windows 平台播放提示音；Windows 平台使用标准库 `winsound`
 
-## 安装与运行
+## 安装与使用
 
-在项目目录内同步依赖：
+### 正式使用
+
+推荐使用 uv 从 PyPI 安装为本机命令行工具：
+
+```bash
+uv tool install up-watcher
+```
+
+如果需要飞书推送或非 Windows 平台声音提醒，可安装对应可选依赖：
+
+```bash
+uv tool install "up-watcher[feishu]"
+uv tool install "up-watcher[sound]"
+uv tool install "up-watcher[all]"
+```
+
+也可以不安装，直接临时运行：
+
+```bash
+uvx --from up-watcher upw --help
+uvx --from up-watcher upw bvinfo BV1xx411c7mD
+```
+
+使用 pip 安装基础功能：
+
+```bash
+pip install up-watcher
+```
+
+pip 同样支持可选依赖：
+
+```bash
+pip install "up-watcher[feishu]"
+pip install "up-watcher[sound]"
+pip install "up-watcher[all]"
+```
+
+### 🚀 开发场景
+
+在项目目录内开发时同步依赖：
 
 ```bash
 uv sync
+uv sync --extra all --group dev
 ```
 
 开发时可直接用 `uv run` 运行：
@@ -84,6 +124,12 @@ upw set cookie "your_bilibili_cookie_string"
 Cookie 和飞书密钥会以明文保存在本机配置文件中，请不要提交或分享该文件。
 
 ### 设置飞书配置
+
+如果是从 PyPI 安装，请确认已安装飞书可选依赖：
+
+```bash
+pip install "up-watcher[feishu]"
+```
 
 配置与使用飞书机器人推送最新评论消息请参考该文档：[feishu_robot.md](./docs/feishu_robot.md)。
 
@@ -282,7 +328,7 @@ upw watch BV1xx411c7mD -i 10
 
 ### 声音提醒没有播放？
 
-Windows 使用系统 `winsound` 播放。非 Windows 平台使用 `simpleaudio` 播放内置 wav 文件，系统需要可用的音频输出环境。
+Windows 使用系统 `winsound` 播放。非 Windows 平台使用 `simpleaudio` 播放内置 wav 文件，请先安装 `up-watcher[sound]` 并确保系统有可用的音频输出环境。
 
 ## 注意事项
 

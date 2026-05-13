@@ -4,8 +4,6 @@ import sys
 
 if sys.platform == "win32":
     import winsound
-else:
-    import simpleaudio as sa
 
 
 def get_audio_path(filename):
@@ -19,6 +17,13 @@ def play_audio(filename):
         if sys.platform == "win32":
             winsound.PlaySound(str(audio_file), winsound.SND_FILENAME)
             return
+
+        try:
+            import simpleaudio as sa
+        except ImportError as exc:
+            raise RuntimeError(
+                "当前平台播放声音需要安装可选依赖：pip install 'up-watcher[sound]'"
+            ) from exc
 
         wave_obj = sa.WaveObject.from_wave_file(str(audio_file))
         play_obj = wave_obj.play()

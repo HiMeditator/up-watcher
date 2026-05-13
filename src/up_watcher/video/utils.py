@@ -4,7 +4,10 @@ from .. import console
 from ..config import get_config_value
 
 
-def get_video_info(bvid: str):
+DEFAULT_REQUEST_TIMEOUT = 60
+
+
+def get_video_info(bvid: str, timeout: float = DEFAULT_REQUEST_TIMEOUT):
     """
     基于 Bilibili 视频的 BV 号获取视频关键信息，格式如下：
 
@@ -25,9 +28,16 @@ def get_video_info(bvid: str):
     session.headers.update(header_args)
 
     url = "https://api.bilibili.com/x/web-interface/view"
-    r = session.get(url, params={"bvid": bvid})
+    r = session.get(url, params={"bvid": bvid}, timeout=timeout)
     r.raise_for_status()
-    data = r.json()["data"]
+    payload = r.json()
+
+    if payload.get("code") != 0:
+        raise RuntimeError(f"Bilibili 视频信息接口返回错误：{payload}")
+
+    data = payload.get("data")
+    if not data:
+        raise RuntimeError(f"Bilibili 视频信息接口返回数据为空：{payload}")
 
     return {
         "aid": data["aid"],
@@ -37,7 +47,12 @@ def get_video_info(bvid: str):
     }
 
 
-def get_video_replies(aid: int, cookie: str | None = None, kwargs: dict | None = None):
+def get_video_replies(
+    aid: int,
+    cookie: str | None = None,
+    kwargs: dict | None = None,
+    timeout: float = DEFAULT_REQUEST_TIMEOUT,
+):
     """
     根据视频 AID 获取最新一批评论信息
     """
@@ -47,11 +62,13 @@ def get_video_replies(aid: int, cookie: str | None = None, kwargs: dict | None =
         "User-Agent": "Mozilla/5.0",
         "Referer": "https://www.bilibili.com",
     }
-    if cookie is None: cookie = get_config_value("cookie")
-    if cookie: header_args["Cookie"] = cookie
+    if cookie is None:
+        cookie = get_config_value("cookie")
+    if cookie:
+        header_args["Cookie"] = cookie
     else:
         console.warning("未找到 Cookie，获取评论可能失败或结果不完整，可通过如下命令设置：")
-        console.command_hint('uv set cookie "your_bilibili_cookie"')
+        console.command_hint('upw set cookie "your_bilibili_cookie"')
     session.headers.update(header_args)
     url = "https://api.bilibili.com/x/v2/reply"
     
@@ -65,11 +82,11 @@ def get_video_replies(aid: int, cookie: str | None = None, kwargs: dict | None =
     if kwargs is not None:
         request_params.update(kwargs)
 
-    r = session.get(url, params=request_params)
+    r = session.get(url, params=request_params, timeout=timeout)
     r.raise_for_status()
     data = r.json()
     
-    if data["code"] != 0:
+    if data.get("code") != 0:
         raise RuntimeError(data)
     
     return data["data"]
@@ -82,13 +99,14 @@ def replies_extractor(data):
     page = data["page"]
     replies = data["replies"]
     comments = []
-    if not replies: return {"page": page, "comments": []}
+    if not replies:
+        return {"page": page, "comments": []}
     for reply in replies:
         comment = {
             "rpid": reply["rpid"],
             "uname": reply["member"]["uname"],
             "ctime": _timestamp_to_local_datetime(reply["ctime"]),
-            "mid": reply["member"]["mid"],
+            "mid": str(reply["member"]["mid"]),
             "message": reply["content"]["message"],
         }
         comments.append(comment)
@@ -108,7 +126,12 @@ def _timestamp_to_local_datetime(timestamp, format_str="%Y-%m-%d %H:%M:%S"):
     return local_dt.strftime(format_str)
 
 
-def get_comments(aid: int, cookie: str | None = None, kwargs: dict | None = None):
+def get_comments(
+    aid: int,
+    cookie: str | None = None,
+    kwargs: dict | None = None,
+    timeout: float = DEFAULT_REQUEST_TIMEOUT,
+):
     """
     获取视频的评论信息，格式如下：
 
@@ -125,5 +148,5 @@ def get_comments(aid: int, cookie: str | None = None, kwargs: dict | None = None
     ]
     ```
     """
-    data = get_video_replies(aid, cookie, kwargs)
+    data = get_video_replies(aid, cookie, kwargs, timeout)
     return replies_extractor(data).get("comments", [])

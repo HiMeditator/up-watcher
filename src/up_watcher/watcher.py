@@ -7,11 +7,6 @@ from typing import Callable
 from . import console
 from .config import get_config_value, set_config
 from .video import get_video_info, get_comments
-from .im import (
-    connect_feishu,
-    is_feishu_connect_to_user,
-    feishu_handle_new_comments
-)
 
 
 def _get_wait_value():
@@ -33,6 +28,23 @@ def _get_wait_value():
 
 
 comment_pool = {}
+
+
+def _load_feishu_support():
+    try:
+        from .im import (
+            connect_feishu,
+            is_feishu_connect_to_user,
+            feishu_handle_new_comments,
+        )
+    except ModuleNotFoundError as exc:
+        if exc.name == "lark_oapi":
+            raise RuntimeError(
+                "使用飞书推送需要安装可选依赖：pip install 'up-watcher[feishu]'"
+            ) from exc
+        raise
+
+    return connect_feishu, is_feishu_connect_to_user, feishu_handle_new_comments
 
 
 def _show_wait_countdown(wait_time: int, total_wait_time: int) -> None:
@@ -77,7 +89,7 @@ def handle_comments(
     global comment_pool
     new_comments = []
     for comment in comments:
-        if comment["mid"] == mid or watch_all:
+        if str(comment["mid"]) == str(mid) or watch_all:
             if comment["rpid"] not in comment_pool:
                 comment_pool[comment["rpid"]] = comment
                 new_comments.append(comment)
@@ -90,6 +102,7 @@ def handle_comments(
         console.show_comments(new_comments)
     else:
         console.info("未发现新评论")
+
 
 def video_comments_watcher(bvid: str, interval: int, watch_all: bool = False, sound_enabled: bool = False) -> None:
     console.info("正在获取视频信息...")
@@ -105,11 +118,11 @@ def video_comments_watcher(bvid: str, interval: int, watch_all: bool = False, so
     set_config("stop", False)
     console.success("监控已启动，按 Ctrl+C 退出；也可以在另一个终端运行 upw stop 停止")
     while True:
-        console.info("正在获取评论...")
         wait_time = interval if interval > 5 else _get_wait_value()
         if not _wait_for_next_check(wait_time):
             console.success("已收到停止指令，监控结束")
             return
+        console.info("正在获取评论...")
         handle_comments(up_mid, get_comments(aid), watch_all, sound_enabled)
 
 
@@ -119,6 +132,8 @@ def video_comments_watcher_feishu(
     watch_all: bool = False,
     sound_enabled: bool = False,
 ) -> None:
+    connect_feishu, is_feishu_connect_to_user, feishu_handle_new_comments = _load_feishu_support()
+
     console.info("正在获取视频信息...")
     video_info = get_video_info(bvid)
     aid = video_info["aid"]
@@ -152,4 +167,5 @@ def video_comments_watcher_feishu(
         if not _wait_for_next_check(wait_time):
             console.success("已收到停止指令，监控结束")
             return
+        console.info("正在获取评论...")
         handle_comments(up_mid, get_comments(aid), watch_all, sound_enabled, feishu_handle_new_comments)
